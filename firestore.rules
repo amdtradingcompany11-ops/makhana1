@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.phone_number != null);
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email_verified == true && request.auth.token.email == 'amdtradingcompany11@gmail.com';
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. User details collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidUser(incoming());
+        
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+        
+      allow delete: if isAdmin();
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'phone'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.name is string && data.name.size() <= 150
+        && data.phone is string && data.phone.size() <= 30
+        && (!('email' in data) || (data.email is string && data.email.size() <= 150))
+        && (!('address' in data) || (data.address is string && data.address.size() <= 1000))
+        && (!('pincode' in data) || (data.pincode is string && data.pincode.size() <= 15))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 100))
+        && (!('state' in data) || (data.state is string && data.state.size() <= 100))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 400))
+        && (!('authMethod' in data) || (data.authMethod is string && data.authMethod.size() <= 50))
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    // 2. Orders collection
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (
+        isAdmin() 
+        || (resource != null && resource.data.userId == request.auth.uid)
+        || (resource == null) // allow for checks during create
+      );
+      
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      
+      allow create: if isValidId(orderId) 
+        && isValidOrder(incoming())
+        && incoming().date == request.time
+        && (!('userId' in incoming()) || (request.auth != null && incoming().userId == request.auth.uid));
+        
+      allow update: if isValidId(orderId)
+        && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid && incoming().userId == existing().userId))
+        && isValidOrder(incoming())
+        && incoming().id == existing().id
+        && incoming().date == existing().date
+        && (
+          // Admin can update anything, including state transitions (Pending, Shipped, Delivered, Cancelled)
+          isAdmin() 
+          // Regular users can only cancel their own pending orders
+          || (
+            incoming().diff(existing()).affectedKeys().hasOnly(['status']) 
+            && existing().status == 'Pending' 
+            && incoming().status == 'Cancelled'
+          )
+        );
+        
+      allow delete: if isAdmin();
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'date', 'productName', 'quantity', 'totalPrice', 'customerName', 'customerPhone', 'address', 'pincode', 'city', 'state', 'status'])
+        && data.id is string && data.id.size() <= 100
+        && data.productName is string && data.productName.size() <= 600
+        && data.quantity is number && data.quantity >= 0 && data.quantity <= 1000
+        && (!('pricePerUnit' in data) || (data.pricePerUnit is number && data.pricePerUnit >= 0))
+        && data.totalPrice is number && data.totalPrice >= 0
+        && data.customerName is string && data.customerName.size() <= 150
+        && data.customerPhone is string && data.customerPhone.size() <= 30
+        && (!('customerEmail' in data) || (data.customerEmail is string && data.customerEmail.size() <= 150))
+        && data.address is string && data.address.size() <= 1000
+        && data.pincode is string && data.pincode.size() <= 15
+        && data.city is string && data.city.size() <= 100
+        && data.state is string && data.state.size() <= 100
+        && data.status in ['Pending', 'Shipped', 'Delivered', 'Cancelled']
+        && (!('packetSize' in data) || (data.packetSize is string && data.packetSize.size() <= 50))
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
+        && (!('date' in data) || data.date is timestamp);
+    }
+  }
+}

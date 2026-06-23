@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Customer registered user profile containing address and contact details.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The Firebase Auth UID of the user." },
+        "name": { "type": "string", "description": "Display name of the customer." },
+        "phone": { "type": "string", "description": "Indian phone number." },
+        "email": { "type": "string", "description": "Email address of the customer." },
+        "address": { "type": "string", "description": "Delivery street address." },
+        "pincode": { "type": "string", "description": "Postal pincode." },
+        "city": { "type": "string", "description": "City name." },
+        "state": { "type": "string", "description": "State name." },
+        "avatarUrl": { "type": "string", "description": "Dicebear avatar seed URL." },
+        "authMethod": { "type": "string", "description": "Whether auth is phone or google" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Profile creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Profile update timestamp" }
+      },
+      "required": ["uid", "name", "phone"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Retail makhana purchase order.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Order unique reference ID." },
+        "userId": { "type": "string", "description": "UID of the ordering user if they are logged in." },
+        "date": { "type": "string", "format": "date-time", "description": "Timestamp when the order was placed" },
+        "productName": { "type": "string", "description": "Class of makhana purchased" },
+        "packetSize": { "type": "string", "description": "Standard pack weight" },
+        "quantity": { "type": "integer", "description": "Cart quantity booked" },
+        "pricePerUnit": { "type": "integer", "description": "INR pricing per unit pack" },
+        "totalPrice": { "type": "integer", "description": "Grand invoice total in INR" },
+        "customerName": { "type": "string", "description": "Full recipient name" },
+        "customerPhone": { "type": "string", "description": "10 digit mobile phone" },
+        "customerEmail": { "type": "string", "description": "User email identifier" },
+        "address": { "type": "string", "description": "Delivery address" },
+        "pincode": { "type": "string", "description": "Postal pincode" },
+        "city": { "type": "string", "description": "City of delivery" },
+        "state": { "type": "string", "description": "State of delivery" },
+        "status": { "type": "string", "enum": ["Pending", "Shipped", "Delivered", "Cancelled"], "description": "Active shipment status tracking state" }
+      },
+      "required": ["id", "date", "productName", "quantity", "totalPrice", "customerName", "customerPhone", "address", "pincode", "city", "state", "status"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user document directories."
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of retail shopping orders."
+    }
+  }
+}

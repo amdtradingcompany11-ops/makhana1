@@ -1,0 +1,6 @@
+{
+  "name": "AMD Trading Company",
+  "description": "Premium Quality Makhana (Foxnuts) Supplier, Wholesaler and Bulk Exporter. Featuring Shuddh Premium and Rozana brands.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
